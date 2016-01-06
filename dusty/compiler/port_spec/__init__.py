@@ -29,8 +29,8 @@ def _add_full_addresses(host_forwarding_spec, host_full_addresses):
 
 def _add_container_ports(host_forwarding_spec, container_ports):
     container_port = host_forwarding_spec['container_port']
-    if container_port in container_ports:
-        raise ReusedContainerPort("{} has already been specified and used".format(container_port))
+    #if container_port in container_ports:
+    #    raise ReusedContainerPort("{} has already been specified and used".format(container_port))
     container_ports.add(container_port)
 
 def _add_stream_host_port(host_forwarding_spec, stream_host_ports):
