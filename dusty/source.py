@@ -30,10 +30,16 @@ class Repo(object):
         # remote path is either of actual remote (github.com/gamechanger/dusty) or
         # other local repo (/repos/dusty) format
         self.remote_path = remote_path
+        self.branch = 'master'
+        # remote repos may end with a branch name, like github.com/gamechanger/dusty#branch
+        if not self.is_local_repo and '#' in remote_path:
+            pieces = remote_path.split('#')
+            self.remote_path = pieces[0]
+            self.branch = pieces[1]
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
-            return self.remote_path == other.remote_path
+            return self.remote_path == other.remote_path and self.branch == other.branch
         return False
 
     def __hash__(self):
@@ -145,7 +151,7 @@ class Repo(object):
     def get_latest_commit(self):
         repo = git.Repo(self.managed_path)
         for ref in repo.refs:
-            if ref.path == 'refs/remotes/origin/master':
+            if ref.path == 'refs/remotes/origin/{}'.format(self.branch):
                 return ref.commit
         return repo.remote().fetch()[0].commit
 
@@ -158,19 +164,19 @@ class Repo(object):
 
     def update_local_repo(self, force=False):
         """Given a remote path (e.g. github.com/gamechanger/gclib), pull the latest
-        commits from master to bring the local copy up to date."""
+        commits from the active branch to bring the local copy up to date."""
         self.ensure_local_repo()
 
         logging.info('Updating local repo {}'.format(self.remote_path))
 
         managed_repo = git.Repo(self.managed_path)
         with git_error_handling():
-            managed_repo.remote().pull('master')
+            managed_repo.remote().pull(self.branch)
             log_to_client('Updated managed copy of {}'.format(self.remote_path))
         if not self.local_is_up_to_date():
             if force:
                 with git_error_handling():
-                    managed_repo.git.reset('--hard', 'origin/master')
+                    managed_repo.git.reset('--hard', 'origin/{}'.format(self.branch))
             else:
                 log_to_client('WARNING: couldn\'t update {} because of local conflicts. '
                               'A container may have modified files in the repos\'s directory. '
