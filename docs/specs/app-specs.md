@@ -26,6 +26,9 @@ Repos can be specified using either a URL or an absolute path to a Git repo on y
 If a repo URL starts with `https`, HTTPS will be used to clone the repo.  Note that this will only work
 with public repositories.  By default, SSH is used to clone repos.
 
+By default the `master` branch will be used. You can specify a branch other than `master` by appending
+`#branch`. For example `github.com/my-org/my-app#branch`.
+
 ## mount
 
 ```
