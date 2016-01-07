@@ -26,6 +26,13 @@ class TestSource(DustyTestCase):
     def test_equality_false(self):
         self.assertNotEqual(Repo('github.com/app/a'), Repo('github.com/app/b'))
 
+    def test_branch_equality_true(self):
+        self.assertEqual(Repo('github.com/app/a#branch'), Repo('github.com/app/a#branch'))
+
+    def test_branch_equality_false(self):
+        self.assertNotEqual(Repo('github.com/app/a'), Repo('github.com/app/a#branch'))
+        self.assertNotEqual(Repo('github.com/app/a#branch1'), Repo('github.com/app/a#branch2'))
+
     def test_resolve_full_name(self):
         self.assertEqual(Repo.resolve(get_all_repos(), 'github.com/app/a'), Repo('github.com/app/a'))
 
@@ -122,6 +129,13 @@ class TestSource(DustyTestCase):
         fake_clone_from.assert_called_with('ssh://git@github.com/app/a', temp_dir)
 
     @patch('git.Repo.clone_from')
+    def test_ensure_local_repo_when_does_not_exist_with_branch(self, fake_clone_from):
+        temp_dir = os.path.join(self.temp_dir, 'b')
+        self.MockableRepo.managed_path = property(lambda repo: temp_dir)
+        self.MockableRepo('github.com/app/b#branch').ensure_local_repo()
+        fake_clone_from.assert_called_with('ssh://git@github.com/app/b', temp_dir)
+
+    @patch('git.Repo.clone_from')
     def test_ensure_local_repo_when_does_not_exist_with_local_remote(self, fake_clone_from):
         temp_dir = os.path.join(self.temp_dir, 'c')
         self.MockableRepo.managed_path = property(lambda repo: temp_dir)
@@ -174,3 +188,16 @@ class TestSource(DustyTestCase):
         fake_repo.return_value = repo_mock
         Repo('github.com/app/a').update_local_repo()
         pull_mock.pull.assert_called_once_with('master')
+
+    @patch('git.Repo')
+    @patch('dusty.source.Repo.local_is_up_to_date')
+    @patch('dusty.source.Repo.ensure_local_repo')
+    def test_update_local_repo_with_branch(self, fake_local_repo, fake_local_up_to_date, fake_repo):
+        repo_mock = Mock()
+        fake_local_up_to_date = Mock()
+        pull_mock = Mock()
+        repo_mock.remote.return_value = pull_mock
+        fake_local_up_to_date.return_value = True
+        fake_repo.return_value = repo_mock
+        Repo('github.com/app/b#branch').update_local_repo()
+        pull_mock.pull.assert_called_once_with('branch')
